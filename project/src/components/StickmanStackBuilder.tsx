@@ -641,14 +641,34 @@ const StickmanStackBuilder: React.FC = () => {
     };
   }, [gameState, gameLoop]);
 
+  // Ensure background music starts after first user interaction
+  useEffect(() => {
+    const tryPlayMusic = () => {
+      if (audioRef.current) {
+        audioRef.current.currentTime = 0;
+        audioRef.current.play().catch(() => {});
+      }
+      window.removeEventListener('pointerdown', tryPlayMusic);
+      window.removeEventListener('keydown', tryPlayMusic);
+    };
+    window.addEventListener('pointerdown', tryPlayMusic);
+    window.addEventListener('keydown', tryPlayMusic);
+    return () => {
+      window.removeEventListener('pointerdown', tryPlayMusic);
+      window.removeEventListener('keydown', tryPlayMusic);
+    };
+  }, []);
+
   useEffect(() => {
     if (!audioRef.current) return;
     if (gameState === 'playing') {
-      // Try to play music after user interaction
-      audioRef.current.currentTime = 0;
-      const playPromise = audioRef.current.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(() => {}); // Ignore autoplay errors
+      // Only play if not already playing
+      if (audioRef.current.paused) {
+        audioRef.current.currentTime = 0;
+        const playPromise = audioRef.current.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(() => {}); // Ignore autoplay errors
+        }
       }
     } else {
       audioRef.current.pause();
