@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://www.fronti.tech/sitemap.xml
+
+# Allow crawling of all pages
+Allow: /
+Allow: /blog
+Allow: /about
+Allow: /contact
+Allow: /sitemap.xml
+
+# Crawl delay (optional)
+Crawl-delay: 1
