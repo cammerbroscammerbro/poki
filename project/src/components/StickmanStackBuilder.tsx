@@ -682,7 +682,7 @@ const StickmanStackBuilder: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
       {/* Background music audio element */}
-      <audio ref={audioRef} src="/candy-upbeat.mp3" loop />
+      <audio ref={audioRef} src="/candy-upbeat-funky-trailer-music-125829.mp3" loop />
       {/* Jump sound effect audio element */}
       <audio ref={jumpSfxRef} src="/cartoon-jump-6462.mp3" preload="auto" />
       {/* Coin sound effect audio element */}
