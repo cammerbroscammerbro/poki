@@ -291,7 +291,8 @@ const StickmanStackBuilder: React.FC = () => {
       // Update moving box with dynamic speed
       if (!currentBox.placed) {
         // Speed increases every 10 blocks (first 10 blocks are now normal speed)
-        const speed = 2.5 + Math.floor(stack.length / 10) * 0.7;
+        // Make base speed faster and increment a bit more
+        const speed = 4.0 + Math.floor(stack.length / 10) * 1.0;
         currentBox.speed = speed;
         currentBox.x += currentBox.direction * currentBox.speed;
         currentBox.glow = Math.sin(currentTime * 0.01) * 0.5 + 0.5;
@@ -355,7 +356,7 @@ const StickmanStackBuilder: React.FC = () => {
           
           // Create new box with random color
           const colorIndex = Math.floor(Math.random() * BOX_COLORS.length);
-          const speed = 2.5 + Math.floor((stack.length + 1) / 10) * 0.7;
+          const speed = 4.0 + Math.floor((stack.length + 1) / 10) * 1.0;
           gameStateRef.current.currentBox = {
             x: Math.random() > 0.5 ? 50 : CANVAS_WIDTH - 50 - BOX_WIDTH,
             y: GROUND_Y - BOX_HEIGHT - (stack.length * BOX_HEIGHT),
@@ -702,7 +703,7 @@ const StickmanStackBuilder: React.FC = () => {
               Speed
             </div>
             <div className="text-2xl font-bold text-white">
-              {(2.5 + Math.floor(score / 10) * 0.7).toFixed(1)}x
+              {(4.0 + Math.floor(score / 10) * 1.0).toFixed(1)}x
             </div>
           </div>
         </div>
@@ -741,7 +742,7 @@ const StickmanStackBuilder: React.FC = () => {
                 <div className="text-6xl mb-4">💥</div>
                 <h2 className="text-4xl font-bold mb-3 text-red-400">Game Over!</h2>
                 <p className="text-2xl mb-2">Final Score: <span className="font-bold text-cyan-400">{score}</span></p>
-                <p className="text-lg mb-2">Speed Reached: <span className="font-bold text-orange-400">{(2.5 + Math.floor(score / 10) * 0.7).toFixed(1)}x</span></p>
+                <p className="text-lg mb-2">Speed Reached: <span className="font-bold text-orange-400">{(4.0 + Math.floor(score / 10) * 1.0).toFixed(1)}x</span></p>
                 {score === highScore && score > 0 && (
                   <p className="text-yellow-400 mb-6 text-xl font-bold">🏆 NEW HIGH SCORE!</p>
                 )}
