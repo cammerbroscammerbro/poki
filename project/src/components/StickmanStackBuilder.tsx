@@ -202,8 +202,9 @@ const StickmanStackBuilder: React.FC = () => {
       stickman.vy = JUMP_FORCE;
       stickman.isJumping = true;
       stickman.isOnGround = false;
-      // Play jump sound effect
+      // Play jump sound effect (force replay)
       if (jumpSfxRef.current) {
+        jumpSfxRef.current.pause();
         jumpSfxRef.current.currentTime = 0;
         jumpSfxRef.current.play();
       }
@@ -288,8 +289,8 @@ const StickmanStackBuilder: React.FC = () => {
 
       // Update moving box with dynamic speed
       if (!currentBox.placed) {
-        // Speed increases every 10 blocks (no external libs)
-        const speed = 1.5 + Math.floor(stack.length / 10) * 0.7;
+        // Speed increases every 10 blocks (first 10 blocks are now normal speed)
+        const speed = 2.5 + Math.floor(stack.length / 10) * 0.7;
         currentBox.speed = speed;
         currentBox.x += currentBox.direction * currentBox.speed;
         currentBox.glow = Math.sin(currentTime * 0.01) * 0.5 + 0.5;
@@ -347,7 +348,7 @@ const StickmanStackBuilder: React.FC = () => {
           
           // Create new box with random color
           const colorIndex = Math.floor(Math.random() * BOX_COLORS.length);
-          const speed = 1.5 + Math.floor((stack.length + 1) / 10) * 0.7;
+          const speed = 2.5 + Math.floor((stack.length + 1) / 10) * 0.7;
           gameStateRef.current.currentBox = {
             x: Math.random() > 0.5 ? 50 : CANVAS_WIDTH - 50 - BOX_WIDTH,
             y: GROUND_Y - BOX_HEIGHT - (stack.length * BOX_HEIGHT),
@@ -635,8 +636,12 @@ const StickmanStackBuilder: React.FC = () => {
   useEffect(() => {
     if (!audioRef.current) return;
     if (gameState === 'playing') {
+      // Try to play music after user interaction
       audioRef.current.currentTime = 0;
-      audioRef.current.play();
+      const playPromise = audioRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {}); // Ignore autoplay errors
+      }
     } else {
       audioRef.current.pause();
     }
@@ -688,7 +693,7 @@ const StickmanStackBuilder: React.FC = () => {
               Speed
             </div>
             <div className="text-2xl font-bold text-white">
-              {(1.5 + Math.floor(score / 10) * 0.7).toFixed(1)}x
+              {(2.5 + Math.floor(score / 10) * 0.7).toFixed(1)}x
             </div>
           </div>
         </div>
@@ -727,7 +732,7 @@ const StickmanStackBuilder: React.FC = () => {
                 <div className="text-6xl mb-4">💥</div>
                 <h2 className="text-4xl font-bold mb-3 text-red-400">Game Over!</h2>
                 <p className="text-2xl mb-2">Final Score: <span className="font-bold text-cyan-400">{score}</span></p>
-                <p className="text-lg mb-2">Speed Reached: <span className="font-bold text-orange-400">{(1.5 + Math.floor(score / 10) * 0.7).toFixed(1)}x</span></p>
+                <p className="text-lg mb-2">Speed Reached: <span className="font-bold text-orange-400">{(2.5 + Math.floor(score / 10) * 0.7).toFixed(1)}x</span></p>
                 {score === highScore && score > 0 && (
                   <p className="text-yellow-400 mb-6 text-xl font-bold">🏆 NEW HIGH SCORE!</p>
                 )}
