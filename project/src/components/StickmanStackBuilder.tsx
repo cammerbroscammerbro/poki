@@ -68,6 +68,7 @@ const StickmanStackBuilder: React.FC = () => {
   const animationRef = useRef<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const jumpSfxRef = useRef<HTMLAudioElement | null>(null);
+  const coinSfxRef = useRef<HTMLAudioElement | null>(null);
   
   const [gameState, setGameState] = useState<'menu' | 'playing' | 'paused' | 'gameOver'>('menu');
   const [score, setScore] = useState(0);
@@ -307,6 +308,12 @@ const StickmanStackBuilder: React.FC = () => {
         const offset = Math.abs(boxCenterX - stickmanCenterX);
         
         if (offset < 40) {
+          // Play coin sound for any successful landing
+          if (coinSfxRef.current) {
+            coinSfxRef.current.pause();
+            coinSfxRef.current.currentTime = 0;
+            coinSfxRef.current.play().catch(() => {});
+          }
           currentBox.placed = true;
           stack.push({ ...currentBox });
           
@@ -657,6 +664,8 @@ const StickmanStackBuilder: React.FC = () => {
       <audio ref={audioRef} src="/candy-upbeat.mp3" loop />
       {/* Jump sound effect audio element */}
       <audio ref={jumpSfxRef} src="/cartoon-jump-6462.mp3" preload="auto" />
+      {/* Coin sound effect audio element */}
+      <audio ref={coinSfxRef} src="/coin-recieved-230517.mp3" preload="auto" />
       <div className="bg-black/20 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-white/10 max-w-4xl">
         <div className="text-center mb-6">
           <h1 className="text-5xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-3">
