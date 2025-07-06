@@ -86,6 +86,7 @@ const StickmanStackBuilder: React.FC = () => {
   const [lastMidgameAdScore, setLastMidgameAdScore] = useState(0); // Track last score at which ad was shown
   const [isMidgameAdPlaying, setIsMidgameAdPlaying] = useState(false); // Prevent input during ad
   const [midgameAdPending, setMidgameAdPending] = useState(false);
+  const [scale, setScale] = useState(1);
 
   const lastAdBlockRef = useRef(0);
   
@@ -836,6 +837,22 @@ const StickmanStackBuilder: React.FC = () => {
     }
   }
 
+  // Responsive scaling effect
+  useEffect(() => {
+    function handleResize() {
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const scaleW = vw / CANVAS_WIDTH;
+      const scaleH = vh / CANVAS_HEIGHT;
+      // Use 0.98 to add a little margin
+      const newScale = Math.min(scaleW, scaleH, 1) * 0.98;
+      setScale(newScale);
+    }
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   return (
     <div className="min-h-screen h-screen w-screen flex flex-col items-center justify-center p-0 m-0 bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 overflow-hidden">
       {/* Background music audio element */}
@@ -844,7 +861,21 @@ const StickmanStackBuilder: React.FC = () => {
       <audio ref={jumpSfxRef} src="/cartoon-jump-6462.mp3" preload="auto" />
       {/* Coin sound effect audio element */}
       <audio ref={coinSfxRef} src="/coin-recieved-230517.mp3" preload="auto" />
-      <div className="bg-black/20 backdrop-blur-xl rounded-3xl p-0 shadow-2xl border border-white/10 max-w-4xl w-full flex flex-col items-center justify-center h-[90vh]">
+      <div
+        className="flex flex-col items-center justify-center"
+        style={{
+          width: CANVAS_WIDTH,
+          height: CANVAS_HEIGHT,
+          transform: `scale(${scale})`,
+          transformOrigin: 'top center',
+          transition: 'transform 0.2s cubic-bezier(.4,2,.6,1)',
+          position: 'relative',
+          margin: 'auto',
+          background: 'rgba(0,0,0,0.10)',
+          borderRadius: '2rem',
+          boxShadow: '0 0 40px 0 rgba(0,0,0,0.3)'
+        }}
+      >
         <div className="text-center mb-4 mt-4">
           <h1 className="text-5xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-0">
             Stickman Stack Builder
