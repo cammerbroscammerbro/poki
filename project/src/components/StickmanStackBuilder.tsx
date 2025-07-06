@@ -63,6 +63,7 @@ const BOX_WIDTH = 90;
 const BOX_HEIGHT = 35;
 const GRAVITY = 0.9;
 const JUMP_FORCE = -16;
+const CAMERA_MARGIN_TOP = 180; // How much space above stickman
 
 const BOX_COLORS = [
   '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
@@ -469,6 +470,8 @@ const StickmanStackBuilder: React.FC = () => {
 
     // Render
     ctx.save();
+    // --- Apply camera vertical offset ---
+    ctx.translate(0, cameraY);
     
     // Apply camera shake
     if (gameStateRef.current.cameraShake > 0) {
