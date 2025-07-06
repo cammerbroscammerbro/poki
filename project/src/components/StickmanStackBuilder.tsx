@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Play, Pause, RotateCcw, Trophy, Zap, Target } from 'lucide-react';
 
@@ -86,7 +87,6 @@ const StickmanStackBuilder: React.FC = () => {
   const [lastMidgameAdScore, setLastMidgameAdScore] = useState(0); // Track last score at which ad was shown
   const [isMidgameAdPlaying, setIsMidgameAdPlaying] = useState(false); // Prevent input during ad
   const [midgameAdPending, setMidgameAdPending] = useState(false);
-  const [scale, setScale] = useState(1);
 
   const lastAdBlockRef = useRef(0);
   
@@ -837,22 +837,6 @@ const StickmanStackBuilder: React.FC = () => {
     }
   }
 
-  // Responsive scaling effect
-  useEffect(() => {
-    function handleResize() {
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
-      const scaleW = vw / CANVAS_WIDTH;
-      const scaleH = vh / CANVAS_HEIGHT;
-      // Use 0.98 to add a little margin
-      const newScale = Math.min(scaleW, scaleH, 1) * 0.98;
-      setScale(newScale);
-    }
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
   return (
     <div className="min-h-screen h-screen w-screen flex flex-col items-center justify-center p-0 m-0 bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 overflow-hidden">
       {/* Background music audio element */}
@@ -866,14 +850,17 @@ const StickmanStackBuilder: React.FC = () => {
         style={{
           width: CANVAS_WIDTH,
           height: CANVAS_HEIGHT,
-          transform: `scale(${scale})`,
-          transformOrigin: 'top center',
-          transition: 'transform 0.2s cubic-bezier(.4,2,.6,1)',
           position: 'relative',
           margin: 'auto',
           background: 'rgba(0,0,0,0.10)',
           borderRadius: '2rem',
-          boxShadow: '0 0 40px 0 rgba(0,0,0,0.3)'
+          boxShadow: '0 0 40px 0 rgba(0,0,0,0.3)',
+          overflow: 'hidden',
+          maxWidth: '100vw',
+          maxHeight: '100vh',
+          left: '50%',
+          top: '50%',
+          transform: 'translate(-50%, -50%)',
         }}
       >
         <div className="text-center mb-4 mt-4">
