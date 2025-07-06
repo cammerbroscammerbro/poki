@@ -898,7 +898,7 @@ const StickmanStackBuilder: React.FC = () => {
                       className="px-10 py-4 bg-gradient-to-r from-yellow-400 via-orange-400 to-pink-500 text-white font-bold rounded-2xl hover:from-yellow-500 hover:via-orange-500 hover:to-pink-600 transition-all transform hover:scale-105 shadow-2xl flex items-center gap-3 mx-auto text-lg"
                     >
                       <span role="img" aria-label="revive">❤️‍🔥</span>
-                      Revive (Watch Ad)
+                      Revive
                     </button>
                   )}
                 </div>
