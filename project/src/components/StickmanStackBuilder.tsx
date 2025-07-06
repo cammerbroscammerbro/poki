@@ -1,6 +1,12 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Play, Pause, RotateCcw, Trophy, Zap, Target } from 'lucide-react';
 
+declare global {
+  interface Window {
+    CrazyGames?: any;
+  }
+}
+
 interface GameObject {
   x: number;
   y: number;
@@ -77,6 +83,11 @@ const StickmanStackBuilder: React.FC = () => {
     const saved = localStorage.getItem('stickman-high-score');
     return saved ? parseInt(saved) : 0;
   });
+  const [lastMidgameAdScore, setLastMidgameAdScore] = useState(0); // Track last score at which ad was shown
+  const [isMidgameAdPlaying, setIsMidgameAdPlaying] = useState(false); // Prevent input during ad
+  const [midgameAdPending, setMidgameAdPending] = useState(false);
+
+  const lastAdBlockRef = useRef(0);
   
   const gameStateRef = useRef({
     stickman: {
@@ -252,6 +263,44 @@ const StickmanStackBuilder: React.FC = () => {
     setGameState('playing');
   }, []);
 
+  // Helper to show midgame ad every 10 blocks
+  const maybeShowMidgameAd = useCallback((currentScore: number) => {
+    if (
+      currentScore > 0 &&
+      currentScore % 10 === 0 &&
+      currentScore !== lastMidgameAdScore &&
+      window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.ad
+    ) {
+      setIsMidgameAdPlaying(true);
+      // Mute audio
+      if (audioRef.current) audioRef.current.muted = true;
+      if (jumpSfxRef.current) jumpSfxRef.current.muted = true;
+      if (coinSfxRef.current) coinSfxRef.current.muted = true;
+      const callbacks = {
+        adFinished: () => {
+          setIsMidgameAdPlaying(false);
+          setLastMidgameAdScore(currentScore);
+          // Unmute audio
+          if (audioRef.current) audioRef.current.muted = false;
+          if (jumpSfxRef.current) jumpSfxRef.current.muted = false;
+          if (coinSfxRef.current) coinSfxRef.current.muted = false;
+        },
+        adError: (error: any) => {
+          setIsMidgameAdPlaying(false);
+          setLastMidgameAdScore(currentScore);
+          // Unmute audio
+          if (audioRef.current) audioRef.current.muted = false;
+          if (jumpSfxRef.current) jumpSfxRef.current.muted = false;
+          if (coinSfxRef.current) coinSfxRef.current.muted = false;
+        },
+        adStarted: () => {
+          // Already muted above
+        },
+      };
+      window.CrazyGames.SDK.ad.requestAd('midgame', callbacks);
+    }
+  }, [lastMidgameAdScore]);
+
   const gameLoop = useCallback((currentTime: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -264,6 +313,11 @@ const StickmanStackBuilder: React.FC = () => {
     gameStateRef.current.lastTime = currentTime;
 
     if (gameState === 'playing') {
+      // Prevent input/game update during midgame ad
+      if (isMidgameAdPlaying) {
+        animationRef.current = requestAnimationFrame(gameLoop);
+        return;
+      }
       // Update stickman physics
       stickman.vy += GRAVITY;
       stickman.x += stickman.vx;
@@ -317,7 +371,17 @@ const StickmanStackBuilder: React.FC = () => {
           }
           currentBox.placed = true;
           stack.push({ ...currentBox });
-          
+          // --- Midgame Ad Trigger ---
+          const newBlockCount = stack.length;
+          if (
+            newBlockCount > 0 &&
+            newBlockCount % 10 === 0 &&
+            lastAdBlockRef.current !== newBlockCount &&
+            !midgameAdPending
+          ) {
+            setMidgameAdPending(true);
+            lastAdBlockRef.current = newBlockCount;
+          }
           // Update stickman position
           stickman.y = currentBox.y - STICKMAN_HEIGHT;
           stickman.vy = 0;
@@ -344,6 +408,8 @@ const StickmanStackBuilder: React.FC = () => {
           
           const newScore = score + totalPoints;
           setScore(newScore);
+          // --- Show midgame ad every 10 blocks ---
+          maybeShowMidgameAd(newScore);
           
           if (totalPoints > basePoints) {
             createFloatingText(currentBox.x + currentBox.width / 2, currentBox.y - 60, `+${totalPoints}`, '#00FF88');
@@ -611,7 +677,50 @@ const StickmanStackBuilder: React.FC = () => {
     ctx.restore();
 
     animationRef.current = requestAnimationFrame(gameLoop);
-  }, [gameState, score, combo, highScore, checkCollision, createParticles, createFloatingText, updateParticles, updateFloatingTexts]);
+  }, [gameState, score, combo, highScore, checkCollision, createParticles, createFloatingText, updateParticles, updateFloatingTexts, midgameAdPending]);
+
+  // --- Show CrazyGames midgame ad when pending ---
+  useEffect(() => {
+    if (!midgameAdPending) return;
+    // Pause game
+    setGameState('paused');
+    // Mute audio
+    if (audioRef.current) audioRef.current.muted = true;
+    if (jumpSfxRef.current) jumpSfxRef.current.muted = true;
+    if (coinSfxRef.current) coinSfxRef.current.muted = true;
+    // Show ad
+    if (window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.ad) {
+      const callbacks = {
+        adFinished: () => {
+          if (audioRef.current) audioRef.current.muted = false;
+          if (jumpSfxRef.current) jumpSfxRef.current.muted = false;
+          if (coinSfxRef.current) coinSfxRef.current.muted = false;
+          setGameState('playing');
+          setMidgameAdPending(false);
+        },
+        adError: (error: any) => {
+          if (audioRef.current) audioRef.current.muted = false;
+          if (jumpSfxRef.current) jumpSfxRef.current.muted = false;
+          if (coinSfxRef.current) coinSfxRef.current.muted = false;
+          setGameState('playing');
+          setMidgameAdPending(false);
+        },
+        adStarted: () => {
+          // Already muted above
+        },
+      };
+      window.CrazyGames.SDK.ad.requestAd('midgame', callbacks);
+    } else {
+      // If SDK not available, just resume
+      setTimeout(() => {
+        if (audioRef.current) audioRef.current.muted = false;
+        if (jumpSfxRef.current) jumpSfxRef.current.muted = false;
+        if (coinSfxRef.current) coinSfxRef.current.muted = false;
+        setGameState('playing');
+        setMidgameAdPending(false);
+      }, 1000);
+    }
+  }, [midgameAdPending]);
 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
@@ -679,56 +788,69 @@ const StickmanStackBuilder: React.FC = () => {
     jump();
   };
 
+  // --- CrazyGames Rewarded Ad Integration for Revive ---
+  const [reviveAvailable, setReviveAvailable] = useState(true); // Only allow 1 revive per game
+  const handleRevive = () => {
+    if (!window.CrazyGames || !window.CrazyGames.SDK || !window.CrazyGames.SDK.ad) {
+      // If SDK not available, just revive (for local/dev)
+      doRevive();
+      return;
+    }
+    const callbacks = {
+      adFinished: () => {
+        console.log('End rewarded ad');
+        doRevive();
+      },
+      adError: (error: any) => {
+        console.log('Error rewarded ad', error);
+        doRevive();
+      },
+      adStarted: () => {
+        console.log('Start rewarded ad');
+        if (audioRef.current) audioRef.current.muted = true;
+        if (jumpSfxRef.current) jumpSfxRef.current.muted = true;
+        if (coinSfxRef.current) coinSfxRef.current.muted = true;
+      },
+    };
+    window.CrazyGames.SDK.ad.requestAd('rewarded', callbacks);
+  };
+  function doRevive() {
+    // Unmute audio
+    if (audioRef.current) audioRef.current.muted = false;
+    if (jumpSfxRef.current) jumpSfxRef.current.muted = false;
+    if (coinSfxRef.current) coinSfxRef.current.muted = false;
+    // Actually revive: reset stickman to top of stack, keep score/stack
+    const { stack } = gameStateRef.current;
+    if (stack.length > 0) {
+      gameStateRef.current.stickman.x = stack[stack.length - 1].x + (BOX_WIDTH - STICKMAN_WIDTH) / 2;
+      gameStateRef.current.stickman.y = stack[stack.length - 1].y - STICKMAN_HEIGHT;
+      gameStateRef.current.stickman.vx = 0;
+      gameStateRef.current.stickman.vy = 0;
+      gameStateRef.current.stickman.isJumping = false;
+      gameStateRef.current.stickman.isOnGround = true;
+      setGameState('playing');
+      setReviveAvailable(false);
+    } else {
+      // If no stack, just restart
+      resetGame();
+    }
+  }
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
+    <div className="min-h-screen h-screen w-screen flex flex-col items-center justify-center p-0 m-0 bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 overflow-hidden">
       {/* Background music audio element */}
       <audio ref={audioRef} src="/candy-upbeat-funky-trailer-music-125829.mp3" loop />
       {/* Jump sound effect audio element */}
       <audio ref={jumpSfxRef} src="/cartoon-jump-6462.mp3" preload="auto" />
       {/* Coin sound effect audio element */}
       <audio ref={coinSfxRef} src="/coin-recieved-230517.mp3" preload="auto" />
-      <div className="bg-black/20 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-white/10 max-w-4xl">
-        <div className="text-center mb-6">
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-3">
+      <div className="bg-black/20 backdrop-blur-xl rounded-3xl p-0 shadow-2xl border border-white/10 max-w-4xl w-full flex flex-col items-center justify-center h-[90vh]">
+        <div className="text-center mb-4 mt-4">
+          <h1 className="text-5xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-0">
             Stickman Stack Builder
           </h1>
-          <p className="text-white/80 text-lg">Master the perfect timing to build the ultimate tower!</p>
         </div>
-
-        <div className="flex justify-between items-center mb-6">
-          <div className="bg-gradient-to-r from-blue-500/20 to-cyan-500/20 rounded-2xl p-4 border border-blue-400/30">
-            <div className="text-cyan-300 text-sm font-medium flex items-center gap-2">
-              <Target size={16} />
-              Score
-            </div>
-            <div className="text-3xl font-bold text-white">{score}</div>
-            {combo > 0 && (
-              <div className="text-yellow-400 text-sm font-bold">
-                {combo}x COMBO!
-              </div>
-            )}
-          </div>
-          
-          <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-2xl p-4 border border-purple-400/30">
-            <div className="text-pink-300 text-sm font-medium flex items-center gap-2">
-              <Trophy size={16} />
-              Best
-            </div>
-            <div className="text-3xl font-bold text-white">{highScore}</div>
-          </div>
-
-          <div className="bg-gradient-to-r from-orange-500/20 to-red-500/20 rounded-2xl p-4 border border-orange-400/30">
-            <div className="text-orange-300 text-sm font-medium flex items-center gap-2">
-              <Zap size={16} />
-              Speed
-            </div>
-            <div className="text-2xl font-bold text-white">
-              {(4.0 + Math.floor(score / 10) * 1.0).toFixed(1)}x
-            </div>
-          </div>
-        </div>
-
-        <div className="relative">
+        <div className="relative flex-1 w-full flex flex-col items-center justify-center">
           <canvas
             ref={canvasRef}
             width={CANVAS_WIDTH}
@@ -736,15 +858,12 @@ const StickmanStackBuilder: React.FC = () => {
             className="border-2 border-white/20 rounded-2xl cursor-pointer shadow-2xl"
             onClick={handleCanvasClick}
           />
-          
           {gameState === 'menu' && (
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm rounded-2xl flex items-center justify-center">
-              <div className="text-center text-white">
-                <div className="text-6xl mb-4">🎮</div>
-                <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
-                  Ready to Stack?
+              <div className="text-center text-white w-full flex flex-col items-center justify-center">
+                <h2 className="text-4xl font-bold mb-8 bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
+                  Stickman Stack Builder
                 </h2>
-                <p className="mb-6 text-xl text-white/80">Perfect timing = Higher scores!</p>
                 <button
                   onClick={resetGame}
                   className="px-10 py-4 bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 text-white font-bold rounded-2xl hover:from-cyan-600 hover:via-blue-600 hover:to-purple-600 transition-all transform hover:scale-105 shadow-2xl flex items-center gap-3 mx-auto text-lg"
@@ -755,7 +874,6 @@ const StickmanStackBuilder: React.FC = () => {
               </div>
             </div>
           )}
-          
           {gameState === 'gameOver' && (
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm rounded-2xl flex items-center justify-center">
               <div className="text-center text-white">
@@ -766,33 +884,28 @@ const StickmanStackBuilder: React.FC = () => {
                 {score === highScore && score > 0 && (
                   <p className="text-yellow-400 mb-6 text-xl font-bold">🏆 NEW HIGH SCORE!</p>
                 )}
-                <button
-                  onClick={resetGame}
-                  className="px-10 py-4 bg-gradient-to-r from-red-500 via-pink-500 to-purple-500 text-white font-bold rounded-2xl hover:from-red-600 hover:via-pink-600 hover:to-purple-600 transition-all transform hover:scale-105 shadow-2xl flex items-center gap-3 mx-auto text-lg"
-                >
-                  <RotateCcw size={24} />
-                  Try Again
-                </button>
+                <div className="flex flex-col gap-4 items-center">
+                  <button
+                    onClick={resetGame}
+                    className="px-10 py-4 bg-gradient-to-r from-red-500 via-pink-500 to-purple-500 text-white font-bold rounded-2xl hover:from-red-600 hover:via-pink-600 hover:to-purple-600 transition-all transform hover:scale-105 shadow-2xl flex items-center gap-3 mx-auto text-lg"
+                  >
+                    <RotateCcw size={24} />
+                    Try Again
+                  </button>
+                  {reviveAvailable && (
+                    <button
+                      onClick={handleRevive}
+                      className="px-10 py-4 bg-gradient-to-r from-yellow-400 via-orange-400 to-pink-500 text-white font-bold rounded-2xl hover:from-yellow-500 hover:via-orange-500 hover:to-pink-600 transition-all transform hover:scale-105 shadow-2xl flex items-center gap-3 mx-auto text-lg"
+                    >
+                      <span role="img" aria-label="revive">❤️‍🔥</span>
+                      Revive (Watch Ad)
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           )}
         </div>
-
-        <div className="mt-6 text-center">
-          <div className="bg-white/5 rounded-2xl p-4 mb-4">
-            <p className="text-white/80 text-sm mb-2">
-              🎯 <span className="font-bold text-cyan-400">Perfect landings</span> build combo multipliers
-            </p>
-            <p className="text-white/80 text-sm">
-              ⚡ Speed increases with each successful stack - how fast can you go?
-            </p>
-          </div>
-          
-          <p className="text-white/60 text-sm">
-            Click or press SPACE to jump at the perfect moment!
-          </p>
-        </div>
-
         <div className="flex gap-4 mt-6 justify-center">
           {gameState === 'playing' && (
             <button
