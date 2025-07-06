@@ -76,6 +76,8 @@ const StickmanStackBuilder: React.FC = () => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const jumpSfxRef = useRef<HTMLAudioElement | null>(null);
   const coinSfxRef = useRef<HTMLAudioElement | null>(null);
+  const playAreaRef = useRef<HTMLDivElement | null>(null);
+  const playAreaContainerRef = useRef<HTMLDivElement | null>(null);
   
   const [gameState, setGameState] = useState<'menu' | 'playing' | 'paused' | 'gameOver'>('menu');
   const [score, setScore] = useState(0);
@@ -470,16 +472,8 @@ const StickmanStackBuilder: React.FC = () => {
 
     // Render
     ctx.save();
-    // --- Apply camera vertical offset ---
-    ctx.translate(0, cameraY);
-    
-    // Apply camera shake
-    if (gameStateRef.current.cameraShake > 0) {
-      ctx.translate(
-        (Math.random() - 0.5) * gameStateRef.current.cameraShake,
-        (Math.random() - 0.5) * gameStateRef.current.cameraShake
-      );
-    }
+    // --- REMOVE cameraY/camera-follow logic ---
+    // ctx.translate(0, cameraY); // REMOVE THIS LINE
     
     // Animated gradient background
     const gradient = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
@@ -839,6 +833,14 @@ const StickmanStackBuilder: React.FC = () => {
     }
   }
 
+  // --- Scroll play area up after every 10 blocks ---
+  useEffect(() => {
+    if (score > 0 && score % 100 === 0 && playAreaContainerRef.current) {
+      // Each 10 blocks = 100 points (10 per block)
+      playAreaContainerRef.current.scrollTop += 120; // Scroll up by 120px (tweak as needed)
+    }
+  }, [score]);
+
   return (
     <div className="min-h-screen h-screen w-screen flex flex-col items-center justify-center p-0 m-0 bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 overflow-hidden">
       {/* Background music audio element */}
@@ -848,8 +850,9 @@ const StickmanStackBuilder: React.FC = () => {
       {/* Coin sound effect audio element */}
       <audio ref={coinSfxRef} src="/coin-recieved-230517.mp3" preload="auto" />
       <div
+        ref={playAreaContainerRef}
         className="bg-black/20 backdrop-blur-xl rounded-3xl p-0 shadow-2xl border border-white/10 max-w-4xl w-full flex flex-col items-center justify-center"
-        style={{ minHeight: '90vh', overflow: 'auto' }}
+        style={{ minHeight: '90vh', overflow: 'auto', maxHeight: '90vh' }}
       >
         <div className="text-center mb-4 mt-4">
           <h1 className="text-5xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-0">
