@@ -89,6 +89,8 @@ const StickmanStackBuilder: React.FC = () => {
   const [lastMidgameAdScore, setLastMidgameAdScore] = useState(0); // Track last score at which ad was shown
   const [isMidgameAdPlaying, setIsMidgameAdPlaying] = useState(false); // Prevent input during ad
   const [midgameAdPending, setMidgameAdPending] = useState(false);
+  // Track how many blocks have been stacked (for sky height)
+  const [skyBlocks, setSkyBlocks] = useState(0);
 
   const lastAdBlockRef = useRef(0);
   
@@ -374,6 +376,7 @@ const StickmanStackBuilder: React.FC = () => {
           }
           currentBox.placed = true;
           stack.push({ ...currentBox });
+          setSkyBlocks(stack.length); // Update sky height after each block
           // --- Midgame Ad Trigger ---
           const newBlockCount = stack.length;
           if (
@@ -841,6 +844,14 @@ const StickmanStackBuilder: React.FC = () => {
     }
   }, [score]);
 
+  // --- Grow sky and scroll to bottom after each block ---
+  useEffect(() => {
+    if (playAreaContainerRef.current) {
+      // Increase sky height and scroll to bottom
+      playAreaContainerRef.current.scrollTop = playAreaContainerRef.current.scrollHeight;
+    }
+  }, [skyBlocks]);
+
   return (
     <div className="min-h-screen h-screen w-screen flex flex-col items-center justify-center p-0 m-0 bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 overflow-hidden">
       {/* Background music audio element */}
@@ -854,6 +865,8 @@ const StickmanStackBuilder: React.FC = () => {
         className="bg-black/20 backdrop-blur-xl rounded-3xl p-0 shadow-2xl border border-white/10 max-w-4xl w-full flex flex-col items-center justify-center"
         style={{ minHeight: '90vh', overflow: 'auto', maxHeight: '90vh' }}
       >
+        {/* Sky spacer grows as blocks are stacked */}
+        <div style={{ height: skyBlocks * BOX_HEIGHT }} />
         <div className="text-center mb-4 mt-4">
           <h1 className="text-5xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-0">
             Stickman Stack Builder
