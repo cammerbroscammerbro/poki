@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Play, Pause, RotateCcw, Trophy, Zap, Target } from 'lucide-react';
 
@@ -846,29 +845,15 @@ const StickmanStackBuilder: React.FC = () => {
       {/* Coin sound effect audio element */}
       <audio ref={coinSfxRef} src="/coin-recieved-230517.mp3" preload="auto" />
       <div
-        className="flex flex-col items-center justify-center"
-        style={{
-          width: CANVAS_WIDTH,
-          height: CANVAS_HEIGHT,
-          position: 'relative',
-          margin: 'auto',
-          background: 'rgba(0,0,0,0.10)',
-          borderRadius: '2rem',
-          boxShadow: '0 0 40px 0 rgba(0,0,0,0.3)',
-          overflow: 'hidden',
-          maxWidth: '100vw',
-          maxHeight: '100vh',
-          left: '50%',
-          top: '50%',
-          transform: 'translate(-50%, -50%)',
-        }}
+        className="bg-black/20 backdrop-blur-xl rounded-3xl p-0 shadow-2xl border border-white/10 max-w-4xl w-full flex flex-col items-center justify-center"
+        style={{ minHeight: '90vh', overflow: 'auto' }}
       >
         <div className="text-center mb-4 mt-4">
           <h1 className="text-5xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-0">
             Stickman Stack Builder
           </h1>
         </div>
-        <div className="relative flex-1 w-full flex flex-col items-center justify-center">
+        <div className="relative flex-1 w-full flex flex-col items-center justify-center" style={{ minWidth: CANVAS_WIDTH, minHeight: CANVAS_HEIGHT }}>
           <canvas
             ref={canvasRef}
             width={CANVAS_WIDTH}
